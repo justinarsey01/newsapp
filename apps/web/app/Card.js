@@ -3,3 +3,5 @@ export default function Card({a,big,row}){return <a href={`/article/${a.slug}`} 
  {a.cover_image_url&&<img src={a.cover_image_url} alt="" loading={big?'eager':'lazy'}/>}
  <div className="meta">{a.categories&&<b>{a.categories.name}</b>}{a.published_at&&<span>{ago(a.published_at)}</span>}{a.is_breaking&&<em>BREAKING</em>}</div>
  <h2>{a.title}</h2>{big&&a.excerpt&&<p>{a.excerpt}</p>}</a>}
+export function Row({a}){return <a href={`/article/${a.slug}`} className="rowi">{a.cover_image_url&&<img src={a.cover_image_url} alt="" loading="lazy"/>}
+ <div><div className="meta">{a.categories&&<b>{a.categories.name}</b>}{a.published_at&&<span>{ago(a.published_at)}</span>}</div><h3>{a.title}</h3></div></a>}

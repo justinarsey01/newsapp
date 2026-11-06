@@ -26,7 +26,7 @@ function Articles({can,sup}){
  const load=async()=>{setList((await sb.from('articles').select('id,title,status,review_note,updated_at').order('updated_at',{ascending:false})).data||[]);
   setCats((await sb.from('categories').select('*')).data||[])};
  useEffect(()=>{load()},[]);
- const save=async status=>{const row={title:a.title,slug:a.slug||slugify(a.title),excerpt:a.excerpt,content:a.content||'',cover_image_url:a.cover_image_url,
+ const save=async status=>{const row={title:a.title,slug:a.slug||slugify(a.title),excerpt:a.excerpt,content:a.content||'',cover_image_url:a.cover_image_url||((a.content||'').match(/<img[^>]+src="([^"]+)"/)||[])[1]||null,
   category_id:a.category_id||null,is_breaking:!!a.is_breaking,status};
   const {error}=a.id?await sb.from('articles').update(row).eq('id',a.id):await sb.from('articles').insert(row);
   if(error)return alert(error.message);setA(null);load()};
@@ -34,6 +34,10 @@ function Articles({can,sup}){
   <input placeholder="Slug (auto)" value={a.slug||''} onChange={e=>setA({...a,slug:e.target.value})}/>
   <textarea placeholder="Short summary" value={a.excerpt||''} onChange={e=>setA({...a,excerpt:e.target.value})}/>
   <input placeholder="Cover image URL" value={a.cover_image_url||''} onChange={e=>setA({...a,cover_image_url:e.target.value})}/>
+  <label className="mut">Or upload a cover: <input type="file" accept="image/*" onChange={async e=>{const f=e.target.files[0];if(!f)return;
+   const p='cover-'+Date.now()+'-'+f.name.replace(/[^a-zA-Z0-9.]/g,'_');const {error}=await sb.storage.from('media').upload(p,f);
+   if(error)return alert('Upload failed: '+error.message);setA({...a,cover_image_url:sb.storage.from('media').getPublicUrl(p).data.publicUrl})}}/></label>
+  {a.cover_image_url&&<img src={a.cover_image_url} alt="" style={{maxWidth:220,display:'block',borderRadius:8}}/>}
   <select value={a.category_id||''} onChange={e=>setA({...a,category_id:e.target.value})}><option value="">No category</option>{cats.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>
   <label><input type="checkbox" style={{width:'auto'}} checked={!!a.is_breaking} onChange={e=>setA({...a,is_breaking:e.target.checked})}/> Breaking news</label>
   <Editor value={a.content} onChange={h=>a.content=h}/>
@@ -63,14 +67,14 @@ function Users(){
    <input type="checkbox" style={{width:'auto'}} checked={u.permissions.includes(k)} onChange={e=>upd(u,{permissions:e.target.checked?[...u.permissions,k]:u.permissions.filter(x=>x!==k)})}/> {v}</label>)}</div>}</div>)}</div>}
 
 function Settings(){
- const [m,setM]=useState(false),[ads,setAds]=useState({ad_header:{},ad_sidebar:{}}),[r,setR]=useState('');
- useEffect(()=>{sb.from('app_settings').select('*').in('key',['maintenance','ad_header','ad_sidebar']).then(({data})=>{const n={ad_header:{},ad_sidebar:{}};
+ const [m,setM]=useState(false),[ads,setAds]=useState({ad_header:{},ad_sidebar:{},ad_inline:{}}),[r,setR]=useState('');
+ useEffect(()=>{sb.from('app_settings').select('*').in('key',['maintenance','ad_header','ad_sidebar','ad_inline']).then(({data})=>{const n={ad_header:{},ad_sidebar:{},ad_inline:{}};
   (data||[]).forEach(x=>{if(x.key==='maintenance')setM(!!x.value);else n[x.key]=x.value});setAds(n)})},[]);
  const set=(k,f,v)=>setAds({...ads,[k]:{...ads[k],[f]:v}});
- const save=async()=>{for(const k of ['ad_header','ad_sidebar'])await sb.from('app_settings').upsert({key:k,value:ads[k]});setR('Saved')};
+ const save=async()=>{for(const k of ['ad_header','ad_sidebar','ad_inline'])await sb.from('app_settings').upsert({key:k,value:ads[k]});setR('Saved')};
  return <div><div className="card"><label><input type="checkbox" style={{width:'auto'}} checked={m} onChange={async e=>{setM(e.target.checked);
   await sb.from('app_settings').upsert({key:'maintenance',value:e.target.checked})}}/> Maintenance mode (shown in the app)</label></div>
-  {[['ad_header','Header ad (wide banner)'],['ad_sidebar','Sidebar ad (home page)']].map(([k,t])=><div className="card" key={k}><b>{t}</b>
+  {[['ad_header','Header ad (wide banner)'],['ad_sidebar','Sidebar ad (home page)'],['ad_inline','In-page ad (between sections)']].map(([k,t])=><div className="card" key={k}><b>{t}</b>
    <input placeholder="Image URL" value={ads[k].image||''} onChange={e=>set(k,'image',e.target.value)}/>
    <input placeholder="Link URL" value={ads[k].link||''} onChange={e=>set(k,'link',e.target.value)}/></div>)}
   <button className="p" onClick={save}>Save ads</button> <span className="mut">{r}</span></div>}
