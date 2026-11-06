@@ -20,7 +20,7 @@ export default function App(){
  const savePrefs=(d,n)=>AsyncStorage.setItem('prefs',JSON.stringify({dark:d,notif:n}));
  const toggleNotif=async v=>{setNotif(v);savePrefs(dark,v);
   if(v&&Device.isDevice){const p=await Notifications.requestPermissionsAsync();if(p.granted){const t=(await Notifications.getExpoPushTokenAsync()).data;
-   await sb.rpc('register_token',{t,p:Platform.OS})}}};
+   await sb.from('device_tokens').upsert({token:t,platform:Platform.OS})}}};
  const T=p=>({color:c.fg,...p});
  if(maint)return <View style={{flex:1,backgroundColor:c.bg,justifyContent:'center',padding:24}}><Text style={T({fontSize:20})}>We are updating the app. Please check back soon.</Text></View>;
  return <View style={{flex:1,backgroundColor:c.bg,paddingTop:48}}>

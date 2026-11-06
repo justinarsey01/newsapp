@@ -7,7 +7,7 @@ export default function Editor({value,onChange}){
  const ed=useEditor({immediatelyRender:false,content:value,onUpdate:({editor})=>onChange(editor.getHTML()),
   extensions:[StarterKit,Underline,Link.configure({openOnClick:false}),Image,TextStyle,Color,TextAlign.configure({types:['heading','paragraph']})]});
  if(!ed)return null;const c=()=>ed.chain().focus();
- const up=async e=>{const f=e.target.files[0];if(!f)return;const p=Date.now()+'-'+f.name.replace(/[^a-zA-Z0-9.]/g,'_');
+ const up=async e=>{const f=e.target.files[0];if(!f)return;const p=`${Date.now()}-${f.name}`;
   const {error}=await supabase.storage.from('media').upload(p,f);if(error)return alert(error.message);
   c().setImage({src:supabase.storage.from('media').getPublicUrl(p).data.publicUrl}).run()};
  const B=(l,f)=><button type="button" key={l} onClick={f}>{l}</button>;

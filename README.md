@@ -4,5 +4,3 @@
 3. `npm install`, then `npm run web` and `npm run mobile`.
 4. Sign up on /admin: the FIRST account becomes super_admin. It assigns roles/permissions in Admin > Users.
 Workflow: anyone but super_admin who publishes is saved as "pending_review"; super_admin approves in Admin > Review.
-Push: `supabase functions deploy send-push` (uses Expo push; needs a dev/production build, not Expo Go, for tokens).
-Add PNG icons (192/512) to apps/web/public and list them in app/manifest.js to make the site installable.
