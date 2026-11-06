@@ -1,7 +1,8 @@
 import {ago} from '../lib/time';
-export default function Card({a,big,row}){return <a href={`/article/${a.slug}`} className={'story'+(big?' lead':'')+(row?' row':'')}>
- {a.cover_image_url&&<img src={a.cover_image_url} alt="" loading={big?'eager':'lazy'}/>}
- <div className="meta">{a.categories&&<b>{a.categories.name}</b>}{a.published_at&&<span>{ago(a.published_at)}</span>}{a.is_breaking&&<em>BREAKING</em>}</div>
- <h2>{a.title}</h2>{big&&a.excerpt&&<p>{a.excerpt}</p>}</a>}
+const Meta=({a})=><div className="meta">{a.categories&&<b>{a.categories.name}</b>}{a.published_at&&<span>{ago(a.published_at)}</span>}{a.is_breaking&&<em>BREAKING</em>}</div>;
+export default function Card({a,big}){
+ if(big)return <a href={`/article/${a.slug}`} className="story lead">{a.cover_image_url&&<img src={a.cover_image_url} alt="" loading="eager"/>}
+  <div className="ov"><Meta a={a}/><h2>{a.title}</h2></div></a>;
+ return <a href={`/article/${a.slug}`} className="story">{a.cover_image_url&&<img src={a.cover_image_url} alt="" loading="lazy"/>}<Meta a={a}/><h2>{a.title}</h2></a>}
 export function Row({a}){return <a href={`/article/${a.slug}`} className="rowi">{a.cover_image_url&&<img src={a.cover_image_url} alt="" loading="lazy"/>}
- <div><div className="meta">{a.categories&&<b>{a.categories.name}</b>}{a.published_at&&<span>{ago(a.published_at)}</span>}</div><h3>{a.title}</h3></div></a>}
+ <div><Meta a={a}/><h3>{a.title}</h3></div></a>}
