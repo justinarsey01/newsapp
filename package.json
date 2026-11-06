@@ -1,0 +1,1 @@
+{"name":"news-platform","private":true,"workspaces":["apps/*","packages/*"],"scripts":{"web":"npm -w apps/web run dev","mobile":"npm -w apps/mobile run start"}}

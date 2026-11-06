@@ -1,0 +1,1 @@
+{"expo":{"name":"The Daily","slug":"the-daily","version":"1.0.0","userInterfaceStyle":"automatic","plugins":["expo-notifications"],"android":{"package":"com.example.thedaily"},"ios":{"bundleIdentifier":"com.example.thedaily"}}}
