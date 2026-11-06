@@ -1,1 +1,2 @@
-export default function manifest(){return {name:'The Daily',short_name:'Daily',start_url:'/',display:'standalone',background_color:'#fbfaf7',theme_color:'#0b6b4f',icons:[]}}
+export default function manifest(){return {name:'The Daily',short_name:'The Daily',description:'Latest news',start_url:'/',scope:'/',display:'standalone',background_color:'#f6faf6',theme_color:'#0a7a3d',
+ icons:[{src:'/icon-192.png',sizes:'192x192',type:'image/png',purpose:'any'},{src:'/icon-512.png',sizes:'512x512',type:'image/png',purpose:'any'},{src:'/icon-512.png',sizes:'512x512',type:'image/png',purpose:'maskable'}]}}
