@@ -16,10 +16,10 @@ $$ select exists(select 1 from profiles where id=auth.uid() and role='super_admi
 create function has_perm(p text) returns boolean language sql stable security definer as
 $$ select is_super() or exists(select 1 from profiles where id=auth.uid() and p=any(permissions)) $$;
 
-create function new_user() returns trigger language plpgsql security definer as $$
-begin insert into profiles(id,full_name,role) values(new.id,new.raw_user_meta_data->>'full_name',
- case when (select count(*) from profiles)=0 then 'super_admin'::user_role else 'user' end); return new; end $$;
-create trigger on_signup after insert on auth.users for each row execute function new_user();
+create function public.new_user() returns trigger language plpgsql security definer set search_path = public as $$
+begin insert into public.profiles(id,full_name,role) values(new.id,new.raw_user_meta_data->>'full_name',
+ case when (select count(*) from public.profiles)=0 then 'super_admin'::public.user_role else 'user'::public.user_role end); return new; end $$;
+create trigger on_signup after insert on auth.users for each row execute function public.new_user();
 
 -- Only super_admin can publish; everyone else's "published" becomes "pending_review"
 create function guard_article() returns trigger language plpgsql security definer as $$
@@ -46,7 +46,8 @@ create policy c_read on categories for select using (true);
 create policy c_write on categories for all using (has_perm('categories.manage'));
 create policy s_read on app_settings for select using (true);
 create policy s_write on app_settings for all using (has_perm('settings.manage'));
-create policy d_own on device_tokens for all using (true) with check (true);
+create function register_token(t text,p text) returns void language sql security definer as
+$$ insert into device_tokens(token,platform,user_id) values(t,p,auth.uid()) on conflict(token) do update set platform=p $$;
 insert into storage.buckets(id,name,public) values('media','media',true) on conflict do nothing;
 create policy m_read on storage.objects for select using (bucket_id='media');
 create policy m_ins on storage.objects for insert with check (bucket_id='media' and has_perm('articles.write'));

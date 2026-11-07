@@ -1,5 +1,5 @@
 'use client';
-import {useEffect,useState} from 'react';import {supabase as sb} from '../../lib/supabase';
+import {useEffect,useState} from 'react';import {sbBrowser} from '../../lib/auth';const sb=sbBrowser();
 import {ROLES,PERMS} from '@news/shared';import Editor from './Editor';
 const slugify=t=>t.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
 export default function Admin(){
@@ -15,27 +15,31 @@ export default function Admin(){
   <input type="password" placeholder="Password" onChange={e=>setAuth({...auth,password:e.target.value})}/>
   <button className="p" onClick={()=>login(false)}>Sign in</button><button onClick={()=>login(true)}>Sign up</button><p className="mut">{msg}</p></main>;
  const sup=me.role==='super_admin',can=p=>sup||me.permissions.includes(p);
- const tabs=['articles',...(sup?['review','users','settings']:[])];
+ const tabs=['articles',...(sup?['review','users','settings']:[]),...(can('categories.manage')?['categories']:[]),...(can('notifications.send')?['notify']:[])];
  return <main><p>Signed in as <b>{me.full_name||'user'}</b> ({me.role}) <button onClick={()=>sb.auth.signOut().then(load)}>Sign out</button></p>
   {me.role==='user'&&<p className="card">Waiting for a super admin to give you a role.</p>}
   <div className="tabs">{tabs.map(t=><button key={t} className={tab===t?'on':''} onClick={()=>setTab(t)}>{t}</button>)}</div>
-  {tab==='articles'&&<Articles can={can} sup={sup}/>}{tab==='review'&&<Review/>}{tab==='users'&&<Users/>}{tab==='settings'&&<Settings/>}</main>}
+  {tab==='articles'&&<Articles can={can} sup={sup}/>}{tab==='review'&&<Review/>}{tab==='users'&&<Users/>}{tab==='settings'&&<Settings/>}{tab==='categories'&&<Categories/>}{tab==='notify'&&<><Notify/><Newsletter/></>}</main>}
 
 function Articles({can,sup}){
  const [list,setList]=useState([]),[cats,setCats]=useState([]),[a,setA]=useState(null);
  const load=async()=>{setList((await sb.from('articles').select('id,title,status,review_note,updated_at').order('updated_at',{ascending:false})).data||[]);
   setCats((await sb.from('categories').select('*')).data||[])};
  useEffect(()=>{load()},[]);
- const save=async status=>{const row={title:a.title,slug:a.slug||slugify(a.title),excerpt:a.excerpt,content:a.content||'',cover_image_url:a.cover_image_url,
-  category_id:a.category_id||null,is_breaking:!!a.is_breaking,status};
+ const save=async status=>{const row={title:a.title,slug:a.slug||slugify(a.title),excerpt:a.excerpt,content:a.content||'',cover_image_url:a.cover_image_url||((a.content||'').match(/<img[^>]+src="([^"]+)"/)||[])[1]||null,
+  category_id:a.category_id||null,is_breaking:!!a.is_breaking,is_sponsored:!!a.is_sponsored,status};
   const {error}=a.id?await sb.from('articles').update(row).eq('id',a.id):await sb.from('articles').insert(row);
   if(error)return alert(error.message);setA(null);load()};
  if(a)return <div className="card"><input placeholder="Headline" value={a.title||''} onChange={e=>setA({...a,title:e.target.value})}/>
   <input placeholder="Slug (auto)" value={a.slug||''} onChange={e=>setA({...a,slug:e.target.value})}/>
   <textarea placeholder="Short summary" value={a.excerpt||''} onChange={e=>setA({...a,excerpt:e.target.value})}/>
   <input placeholder="Cover image URL" value={a.cover_image_url||''} onChange={e=>setA({...a,cover_image_url:e.target.value})}/>
+  <label className="mut">Or upload a cover: <input type="file" accept="image/*" onChange={async e=>{const f=e.target.files[0];if(!f)return;
+   const p='cover-'+Date.now()+'-'+f.name.replace(/[^a-zA-Z0-9.]/g,'_');const {error}=await sb.storage.from('media').upload(p,f);
+   if(error)return alert('Upload failed: '+error.message);setA({...a,cover_image_url:sb.storage.from('media').getPublicUrl(p).data.publicUrl})}}/></label>
+  {a.cover_image_url&&<img src={a.cover_image_url} alt="" style={{maxWidth:220,display:'block',borderRadius:8}}/>}
   <select value={a.category_id||''} onChange={e=>setA({...a,category_id:e.target.value})}><option value="">No category</option>{cats.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>
-  <label><input type="checkbox" style={{width:'auto'}} checked={!!a.is_breaking} onChange={e=>setA({...a,is_breaking:e.target.checked})}/> Breaking news</label>
+  <label><input type="checkbox" style={{width:'auto'}} checked={!!a.is_breaking} onChange={e=>setA({...a,is_breaking:e.target.checked})}/> Breaking news</label> <label><input type="checkbox" style={{width:'auto'}} checked={!!a.is_sponsored} onChange={e=>setA({...a,is_sponsored:e.target.checked})}/> Promoted (sponsored)</label>
   <Editor value={a.content} onChange={h=>a.content=h}/>
   <button onClick={()=>save('draft')}>Save draft</button>
   <button className="p" onClick={()=>save('published')}>{sup?'Publish':'Submit for review'}</button><button onClick={()=>setA(null)}>Cancel</button></div>;
@@ -63,7 +67,31 @@ function Users(){
    <input type="checkbox" style={{width:'auto'}} checked={u.permissions.includes(k)} onChange={e=>upd(u,{permissions:e.target.checked?[...u.permissions,k]:u.permissions.filter(x=>x!==k)})}/> {v}</label>)}</div>}</div>)}</div>}
 
 function Settings(){
- const [m,setM]=useState(false);
- useEffect(()=>{sb.from('app_settings').select('value').eq('key','maintenance').maybeSingle().then(r=>setM(!!r.data?.value))},[]);
- return <div className="card"><label><input type="checkbox" style={{width:'auto'}} checked={m} onChange={async e=>{setM(e.target.checked);
-  await sb.from('app_settings').upsert({key:'maintenance',value:e.target.checked})}}/> Maintenance mode (shown in the app)</label></div>}
+ const [m,setM]=useState(false),[ads,setAds]=useState({ad_header:{},ad_sidebar:{},ad_inline:{}}),[r,setR]=useState('');
+ useEffect(()=>{sb.from('app_settings').select('*').in('key',['maintenance','ad_header','ad_sidebar','ad_inline']).then(({data})=>{const n={ad_header:{},ad_sidebar:{},ad_inline:{}};
+  (data||[]).forEach(x=>{if(x.key==='maintenance')setM(!!x.value);else n[x.key]=x.value});setAds(n)})},[]);
+ const set=(k,f,v)=>setAds({...ads,[k]:{...ads[k],[f]:v}});
+ const save=async()=>{for(const k of ['ad_header','ad_sidebar','ad_inline'])await sb.from('app_settings').upsert({key:k,value:ads[k]});setR('Saved')};
+ return <div><div className="card"><label><input type="checkbox" style={{width:'auto'}} checked={m} onChange={async e=>{setM(e.target.checked);
+  await sb.from('app_settings').upsert({key:'maintenance',value:e.target.checked})}}/> Maintenance mode (shown in the app)</label></div>
+  {[['ad_header','Header ad (wide banner)'],['ad_sidebar','Sidebar ad (home page)'],['ad_inline','In-page ad (between sections)']].map(([k,t])=><div className="card" key={k}><b>{t}</b>
+   <input placeholder="Image URL" value={ads[k].image||''} onChange={e=>set(k,'image',e.target.value)}/>
+   <input placeholder="Link URL" value={ads[k].link||''} onChange={e=>set(k,'link',e.target.value)}/></div>)}
+  <button className="p" onClick={save}>Save ads</button> <span className="mut">{r}</span></div>}
+
+function Categories(){
+ const [l,setL]=useState([]),[n,setN]=useState('');const load=async()=>setL((await sb.from('categories').select('*').order('name')).data||[]);useEffect(()=>{load()},[]);
+ return <div className="card"><input placeholder="New category name" value={n} onChange={e=>setN(e.target.value)}/>
+  <button className="p" onClick={async()=>{if(!n)return;const {error}=await sb.from('categories').insert({name:n,slug:slugify(n)});if(error)alert(error.message);setN('');load()}}>Add category</button>
+  {!l.length&&<p className="mut">No categories yet.</p>}{l.map(c=><p key={c.id}>{c.name} <button onClick={async()=>{await sb.from('categories').delete().eq('id',c.id);load()}}>Delete</button></p>)}</div>}
+
+function Notify(){
+ const [t,setT]=useState(''),[b,setB]=useState(''),[r,setR]=useState('');
+ return <div className="card"><input placeholder="Title" value={t} onChange={e=>setT(e.target.value)}/><textarea placeholder="Message" value={b} onChange={e=>setB(e.target.value)}/>
+  <button className="p" onClick={async()=>{setR('Sending…');const {data,error}=await sb.functions.invoke('send-push',{body:{title:t,body:b}});setR(error?error.message:`Sent to ${data.sent} devices`)}}>Send notification</button><p className="mut">{r}</p></div>}
+
+function Newsletter(){
+ const [s,setS]=useState(''),[b,setB]=useState(''),[l,setL]=useState(''),[r,setR]=useState('');
+ return <div className="card"><b>Email subscribers</b><input placeholder="Subject" value={s} onChange={e=>setS(e.target.value)}/><textarea placeholder="Message" value={b} onChange={e=>setB(e.target.value)}/>
+  <input placeholder="Story link (optional)" value={l} onChange={e=>setL(e.target.value)}/>
+  <button className="p" onClick={async()=>{setR('Sending…');const {data,error}=await sb.functions.invoke('send-newsletter',{body:{subject:s,body:b,link:l}});setR(error?error.message:`Emailed ${data.sent} subscribers`)}}>Send email</button> <span className="mut">{r}</span></div>}
