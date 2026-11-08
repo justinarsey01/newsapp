@@ -80,3 +80,7 @@ button{cursor:pointer}button.p{background:var(--ac);color:#fff;border-color:var(
 .pair img+img{border-left:4px solid var(--bg)}
 
 .bell.on{background:var(--ac);color:#fff}
+
+.top{position:sticky;top:8px;z-index:40;backdrop-filter:blur(10px)}
+html{scroll-padding-top:96px}
+@media(max-width:960px){.top{top:4px;padding:8px 14px}}
