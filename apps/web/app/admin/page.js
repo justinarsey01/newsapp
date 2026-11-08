@@ -86,10 +86,14 @@ function Categories(){
   {!l.length&&<p className="mut">No categories yet.</p>}{l.map(c=><p key={c.id}>{c.name} <button onClick={async()=>{await sb.from('categories').delete().eq('id',c.id);load()}}>Delete</button></p>)}</div>}
 
 function Notify(){
- const [t,setT]=useState(''),[b,setB]=useState(''),[u,setU]=useState(''),[r,setR]=useState('');
+ const [t,setT]=useState(''),[b,setB]=useState(''),[u,setU]=useState(''),[im,setIm]=useState(''),[r,setR]=useState('');
+ const up=async e=>{const f0=e.target.files[0];if(!f0)return;const f=await shrink(f0);const p='push-'+Date.now()+'-'+f.name.replace(/[^a-zA-Z0-9.]/g,'_');
+  const {error}=await sb.storage.from('media').upload(p,f,{cacheControl:'31536000'});if(error)return alert(error.message);setIm(sb.storage.from('media').getPublicUrl(p).data.publicUrl)};
  return <div className="card"><b>Push notification</b><input placeholder="Title" value={t} onChange={e=>setT(e.target.value)}/><textarea placeholder="Message" value={b} onChange={e=>setB(e.target.value)}/>
   <input placeholder="Story link, e.g. /article/my-story (optional)" value={u} onChange={e=>setU(e.target.value)}/>
-  <button className="p" onClick={async()=>{setR('Sending…');const {data,error}=await sb.functions.invoke('send-push',{body:{title:t,body:b,url:u}});setR(error?error.message:`Sent to ${data.sent+data.web} devices`)}}>Send notification</button><p className="mut">{r}</p></div>}
+  <input placeholder="Image URL (optional, wide 2:1 works best)" value={im} onChange={e=>setIm(e.target.value)}/>
+  <label className="mut">Or upload an image: <input type="file" accept="image/*" onChange={up}/></label>{im&&<img src={im} alt="" style={{maxWidth:240,display:'block',borderRadius:8}}/>}
+  <button className="p" onClick={async()=>{setR('Sending…');const {data,error}=await sb.functions.invoke('send-push',{body:{title:t,body:b,url:u,image:im}});setR(error?error.message:`Sent to ${data.sent+data.web} devices`)}}>Send notification</button><p className="mut">{r}</p></div>}
 
 function Newsletter(){
  const [s,setS]=useState(''),[b,setB]=useState(''),[l,setL]=useState(''),[r,setR]=useState('');

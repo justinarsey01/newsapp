@@ -8,7 +8,8 @@ Deno.serve(async req=>{
  const user=createClient(url,Deno.env.get('SUPABASE_ANON_KEY')!,{global:{headers:{Authorization:req.headers.get('Authorization')!}}});
  const {data:ok}=await user.rpc('has_perm',{p:'notifications.send'});
  if(!ok)return J({error:'Not allowed'},403);
- const {title,body,url:link}=await req.json();
+ const {title,body,url:link,image}=await req.json();
+ const img=typeof image==='string'&&/^https:\/\//.test(image)&&image.length<600?image:undefined;
  const path=typeof link==='string'&&link.startsWith('/')&&!link.startsWith('//')?link:'/';
  const admin=createClient(url,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
  const tokens=((await admin.from('device_tokens').select('token')).data||[]).map(r=>r.token);
@@ -17,7 +18,7 @@ Deno.serve(async req=>{
    body:JSON.stringify(tokens.slice(i,i+100).map(to=>({to,title,body,sound:'default',data:{url:path}})))});
  let web=0;const pub=Deno.env.get('VAPID_PUBLIC_KEY'),priv=Deno.env.get('VAPID_PRIVATE_KEY');
  if(pub&&priv){webpush.setVapidDetails(Deno.env.get('VAPID_SUBJECT')||'mailto:admin@example.com',pub,priv);
-  const subs=(await admin.from('push_subscriptions').select('endpoint,p256dh,auth')).data||[];const payload=JSON.stringify({title,body,url:path});
+  const subs=(await admin.from('push_subscriptions').select('endpoint,p256dh,auth')).data||[];const payload=JSON.stringify({title,body,url:path,image:img});
   for(let i=0;i<subs.length;i+=50)await Promise.all(subs.slice(i,i+50).map(async s=>{
    try{await webpush.sendNotification({endpoint:s.endpoint,keys:{p256dh:s.p256dh,auth:s.auth}},payload);web++}
    catch(e){if(e?.statusCode===404||e?.statusCode===410)await admin.from('push_subscriptions').delete().eq('endpoint',s.endpoint)}}))}

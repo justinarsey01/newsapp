@@ -14,7 +14,11 @@ self.addEventListener('message',e=>{const d=e.data;if(!d||d.type!=='precache')re
   if(x.origin===location.origin)put(PAGES,x.href,await fetch(x.href));
   else if(x.hostname.endsWith('.supabase.co'))put(IMG,x.href,await fetch(x.href,{mode:'no-cors'}))}catch(_){}})))});
 self.addEventListener('push',e=>{let d={};try{d=e.data.json()}catch(_){}
- e.waitUntil(self.registration.showNotification(String(d.title||'The Daily').slice(0,100),{body:String(d.body||'').slice(0,250),icon:'/icon-192.png',badge:'/icon-192.png',data:{url:d.url||'/'}}))});
+ const o={body:String(d.body||'').slice(0,250),icon:'/icon-192.png',badge:'/badge-96.png',
+  actions:[{action:'open',title:'Read story'},{action:'share',title:'Share'}],data:{url:d.url||'/',title:String(d.title||'')}};
+ if(typeof d.image==='string'&&d.image.startsWith('https://'))o.image=d.image;
+ e.waitUntil(self.registration.showNotification(String(d.title||'The Daily').slice(0,100),o))});
 self.addEventListener('notificationclick',e=>{e.notification.close();let u=location.origin+'/';
  try{const x=new URL(e.notification.data?.url||'/',location.origin);if(x.origin===location.origin)u=x.href}catch(_){}
+ if(e.action==='share'){e.waitUntil(clients.openWindow('https://wa.me/?text='+encodeURIComponent((e.notification.data?.title||'')+' '+u)));return}
  e.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(l=>{for(const c of l){if('focus' in c){c.navigate(u);return c.focus()}}return clients.openWindow(u)}))});
