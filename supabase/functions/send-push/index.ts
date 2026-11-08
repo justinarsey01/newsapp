@@ -9,9 +9,11 @@ Deno.serve(async req=>{
  const {data:ok}=await user.rpc('has_perm',{p:'notifications.send'});
  if(!ok)return J({error:'Not allowed'},403);
  const {title,body,url:link,image}=await req.json();
- const img=typeof image==='string'&&/^https:\/\//.test(image)&&image.length<600?image:undefined;
+ let img=typeof image==='string'&&/^https:\/\//.test(image)&&image.length<600?image:undefined;
  const path=typeof link==='string'&&link.startsWith('/')&&!link.startsWith('//')?link:'/';
  const admin=createClient(url,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+ if(!img&&path.startsWith('/article/')){const {data:a}=await admin.from('articles').select('cover_image_url').eq('slug',decodeURIComponent(path.slice(9))).eq('status','published').maybeSingle();
+  if(a?.cover_image_url?.startsWith('https://'))img=a.cover_image_url}
  const tokens=((await admin.from('device_tokens').select('token')).data||[]).map(r=>r.token);
  for(let i=0;i<tokens.length;i+=100)
   await fetch('https://exp.host/--/api/v2/push/send',{method:'POST',headers:{'Content-Type':'application/json'},

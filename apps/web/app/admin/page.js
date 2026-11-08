@@ -87,9 +87,10 @@ function Categories(){
 
 function Notify(){
  const [t,setT]=useState(''),[b,setB]=useState(''),[u,setU]=useState(''),[im,setIm]=useState(''),[r,setR]=useState('');
+ const [arts,setArts]=useState([]);useEffect(()=>{sb.from('articles').select('title,slug,excerpt,cover_image_url').eq('status','published').order('published_at',{ascending:false}).limit(20).then(r=>setArts(r.data||[]))},[]);
  const up=async e=>{const f0=e.target.files[0];if(!f0)return;const f=await shrink(f0);const p='push-'+Date.now()+'-'+f.name.replace(/[^a-zA-Z0-9.]/g,'_');
   const {error}=await sb.storage.from('media').upload(p,f,{cacheControl:'31536000'});if(error)return alert(error.message);setIm(sb.storage.from('media').getPublicUrl(p).data.publicUrl)};
- return <div className="card"><b>Push notification</b><input placeholder="Title" value={t} onChange={e=>setT(e.target.value)}/><textarea placeholder="Message" value={b} onChange={e=>setB(e.target.value)}/>
+ return <div className="card"><b>Push notification</b><select onChange={e=>{const a=arts.find(x=>x.slug===e.target.value);if(a){setT(a.title);setB(a.excerpt||'');setU('/article/'+a.slug);setIm(a.cover_image_url||'')}}}><option value="">Pick a published story (fills the form)</option>{arts.map(a=><option key={a.slug} value={a.slug}>{a.title}</option>)}</select><input placeholder="Title" value={t} onChange={e=>setT(e.target.value)}/><textarea placeholder="Message" value={b} onChange={e=>setB(e.target.value)}/>
   <input placeholder="Story link, e.g. /article/my-story (optional)" value={u} onChange={e=>setU(e.target.value)}/>
   <input placeholder="Image URL (optional, wide 2:1 works best)" value={im} onChange={e=>setIm(e.target.value)}/>
   <label className="mut">Or upload an image: <input type="file" accept="image/*" onChange={up}/></label>{im&&<img src={im} alt="" style={{maxWidth:240,display:'block',borderRadius:8}}/>}

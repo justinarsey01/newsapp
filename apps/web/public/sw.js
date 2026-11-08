@@ -16,7 +16,7 @@ self.addEventListener('message',e=>{const d=e.data;if(!d||d.type!=='precache')re
 self.addEventListener('push',e=>{let d={};try{d=e.data.json()}catch(_){}
  const o={body:String(d.body||'').slice(0,250),icon:'/icon-192.png',badge:'/badge-96.png',
   actions:[{action:'open',title:'Read story'},{action:'share',title:'Share'}],data:{url:d.url||'/',title:String(d.title||'')}};
- if(typeof d.image==='string'&&d.image.startsWith('https://'))o.image=d.image;
+ if(typeof d.image==='string'&&d.image.startsWith('https://')){o.image=d.image;o.icon=d.image}
  e.waitUntil(self.registration.showNotification(String(d.title||'The Daily').slice(0,100),o))});
 self.addEventListener('notificationclick',e=>{e.notification.close();let u=location.origin+'/';
  try{const x=new URL(e.notification.data?.url||'/',location.origin);if(x.origin===location.origin)u=x.href}catch(_){}
