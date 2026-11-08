@@ -10,3 +10,8 @@ Add PNG icons (192/512) to apps/web/public and list them in app/manifest.js to m
 1. Supabase SQL editor: run `supabase/migrations/002_features.sql` (promoted flag, subscribers, comments).
 2. Google sign-in: Google Cloud Console > OAuth client (Web). Authorized redirect URI: https://YOUR-PROJECT.supabase.co/auth/v1/callback. Put its Client ID/Secret in Supabase > Authentication > Providers > Google. Add your site URL to Authentication > URL Configuration (Site URL + Redirect URLs).
 3. Email: create a Resend account, verify your domain, then `supabase secrets set RESEND_API_KEY=... FROM_EMAIL="The Daily <news@yourdomain.com>" SITE_URL=https://yourdomain.com` and `supabase functions deploy send-newsletter`.
+
+## Web push + hardening
+1. Run `supabase/migrations/003_push.sql`.
+2. `npx web-push generate-vapid-keys` -> put the PUBLIC key in Vercel as NEXT_PUBLIC_VAPID_PUBLIC_KEY; set Supabase function secrets VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT (mailto:you@domain.com), SITE_URL; redeploy function `send-push`.
+3. Supabase > Authentication: enable CAPTCHA (Turnstile), min password length 10+, email confirmation; enable MFA for admin accounts.

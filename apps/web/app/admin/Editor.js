@@ -2,7 +2,7 @@
 import {useEditor,EditorContent} from '@tiptap/react';import StarterKit from '@tiptap/starter-kit';import {Node} from '@tiptap/core';
 import Underline from '@tiptap/extension-underline';import Link from '@tiptap/extension-link';import Image from '@tiptap/extension-image';
 import TextAlign from '@tiptap/extension-text-align';import {Color} from '@tiptap/extension-color';import TextStyle from '@tiptap/extension-text-style';
-import {sbBrowser} from '../../lib/auth';const supabase=sbBrowser();
+import {sbBrowser} from '../../lib/auth';import {shrink} from '../../lib/shrink';const supabase=sbBrowser();
 const Pair=Node.create({name:'imagePair',group:'block',atom:true,
  addAttributes(){return {a:{default:null},b:{default:null}}},
  parseHTML(){return [{tag:'div.pair',getAttrs:el=>({a:el.querySelectorAll('img')[0]?.getAttribute('src'),b:el.querySelectorAll('img')[1]?.getAttribute('src')})}]},
@@ -11,11 +11,11 @@ export default function Editor({value,onChange}){
  const ed=useEditor({immediatelyRender:false,content:value,onUpdate:({editor})=>onChange(editor.getHTML()),
   extensions:[StarterKit,Pair,Underline,Link.configure({openOnClick:false}),Image,TextStyle,Color,TextAlign.configure({types:['heading','paragraph']})]});
  if(!ed)return null;const c=()=>ed.chain().focus();
- const up=async e=>{const f=e.target.files[0];if(!f)return;const p=Date.now()+'-'+f.name.replace(/[^a-zA-Z0-9.]/g,'_');
-  const {error}=await supabase.storage.from('media').upload(p,f);if(error)return alert(error.message);
+ const up=async e=>{const f0=e.target.files[0];if(!f0)return;const f=await shrink(f0);const p=Date.now()+'-'+f.name.replace(/[^a-zA-Z0-9.]/g,'_');
+  const {error}=await supabase.storage.from('media').upload(p,f,{cacheControl:'31536000'});if(error)return alert(error.message);
   c().setImage({src:supabase.storage.from('media').getPublicUrl(p).data.publicUrl}).run()};
  const pair=async e=>{const fs=[...e.target.files];if(fs.length!==2)return alert('Please select exactly 2 images');const urls=[];
-  for(const [i,f] of fs.entries()){const p=Date.now()+'-'+i+'-'+f.name.replace(/[^a-zA-Z0-9.]/g,'_');const {error}=await supabase.storage.from('media').upload(p,f);
+  for(const [i,f0] of fs.entries()){const f=await shrink(f0);const p=Date.now()+'-'+i+'-'+f.name.replace(/[^a-zA-Z0-9.]/g,'_');const {error}=await supabase.storage.from('media').upload(p,f,{cacheControl:'31536000'});
    if(error)return alert(error.message);urls.push(supabase.storage.from('media').getPublicUrl(p).data.publicUrl)}
   c().insertContent({type:'imagePair',attrs:{a:urls[0],b:urls[1]}}).run();e.target.value=''};
  const B=(l,f)=><button type="button" key={l} onClick={f}>{l}</button>;

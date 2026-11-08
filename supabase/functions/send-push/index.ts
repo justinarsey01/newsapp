@@ -1,16 +1,25 @@
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2';
+import webpush from 'npm:web-push@3.6.7';
 const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, content-type, x-client-info, apikey'};
+const J=(o:unknown,s=200)=>new Response(JSON.stringify(o),{status:s,headers:{...cors,'Content-Type':'application/json'}});
 Deno.serve(async req=>{
  if(req.method==='OPTIONS')return new Response('ok',{headers:cors});
  const url=Deno.env.get('SUPABASE_URL')!;
  const user=createClient(url,Deno.env.get('SUPABASE_ANON_KEY')!,{global:{headers:{Authorization:req.headers.get('Authorization')!}}});
  const {data:ok}=await user.rpc('has_perm',{p:'notifications.send'});
- if(!ok)return new Response(JSON.stringify({error:'Not allowed'}),{status:403,headers:cors});
- const {title,body}=await req.json();
+ if(!ok)return J({error:'Not allowed'},403);
+ const {title,body,url:link}=await req.json();
+ const path=typeof link==='string'&&link.startsWith('/')&&!link.startsWith('//')?link:'/';
  const admin=createClient(url,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
- const {data:t}=await admin.from('device_tokens').select('token');const tokens=(t||[]).map(r=>r.token);
+ const tokens=((await admin.from('device_tokens').select('token')).data||[]).map(r=>r.token);
  for(let i=0;i<tokens.length;i+=100)
   await fetch('https://exp.host/--/api/v2/push/send',{method:'POST',headers:{'Content-Type':'application/json'},
-   body:JSON.stringify(tokens.slice(i,i+100).map(to=>({to,title,body,sound:'default'})))});
- return new Response(JSON.stringify({sent:tokens.length}),{headers:{...cors,'Content-Type':'application/json'}});
+   body:JSON.stringify(tokens.slice(i,i+100).map(to=>({to,title,body,sound:'default',data:{url:path}})))});
+ let web=0;const pub=Deno.env.get('VAPID_PUBLIC_KEY'),priv=Deno.env.get('VAPID_PRIVATE_KEY');
+ if(pub&&priv){webpush.setVapidDetails(Deno.env.get('VAPID_SUBJECT')||'mailto:admin@example.com',pub,priv);
+  const subs=(await admin.from('push_subscriptions').select('endpoint,p256dh,auth')).data||[];const payload=JSON.stringify({title,body,url:path});
+  for(let i=0;i<subs.length;i+=50)await Promise.all(subs.slice(i,i+50).map(async s=>{
+   try{await webpush.sendNotification({endpoint:s.endpoint,keys:{p256dh:s.p256dh,auth:s.auth}},payload);web++}
+   catch(e){if(e?.statusCode===404||e?.statusCode===410)await admin.from('push_subscriptions').delete().eq('endpoint',s.endpoint)}}))}
+ return J({sent:tokens.length,web});
 });

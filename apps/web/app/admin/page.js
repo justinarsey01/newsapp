@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useState} from 'react';import {sbBrowser} from '../../lib/auth';const sb=sbBrowser();
-import {ROLES,PERMS} from '@news/shared';import Editor from './Editor';
+import {ROLES,PERMS} from '@news/shared';import Editor from './Editor';import {clean} from '../../lib/clean';import {shrink} from '../../lib/shrink';
 const slugify=t=>t.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
 export default function Admin(){
  const [me,setMe]=useState(null),[tab,setTab]=useState('articles'),[auth,setAuth]=useState({email:'',password:'',name:''}),[msg,setMsg]=useState('');
@@ -34,8 +34,8 @@ function Articles({can,sup}){
   <input placeholder="Slug (auto)" value={a.slug||''} onChange={e=>setA({...a,slug:e.target.value})}/>
   <textarea placeholder="Short summary" value={a.excerpt||''} onChange={e=>setA({...a,excerpt:e.target.value})}/>
   <input placeholder="Cover image URL" value={a.cover_image_url||''} onChange={e=>setA({...a,cover_image_url:e.target.value})}/>
-  <label className="mut">Or upload a cover: <input type="file" accept="image/*" onChange={async e=>{const f=e.target.files[0];if(!f)return;
-   const p='cover-'+Date.now()+'-'+f.name.replace(/[^a-zA-Z0-9.]/g,'_');const {error}=await sb.storage.from('media').upload(p,f);
+  <label className="mut">Or upload a cover: <input type="file" accept="image/*" onChange={async e=>{const f0=e.target.files[0];if(!f0)return;const f=await shrink(f0);
+   const p='cover-'+Date.now()+'-'+f.name.replace(/[^a-zA-Z0-9.]/g,'_');const {error}=await sb.storage.from('media').upload(p,f,{cacheControl:'31536000'});
    if(error)return alert('Upload failed: '+error.message);setA({...a,cover_image_url:sb.storage.from('media').getPublicUrl(p).data.publicUrl})}}/></label>
   {a.cover_image_url&&<img src={a.cover_image_url} alt="" style={{maxWidth:220,display:'block',borderRadius:8}}/>}
   <select value={a.category_id||''} onChange={e=>setA({...a,category_id:e.target.value})}><option value="">No category</option>{cats.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>
@@ -56,7 +56,7 @@ function Review(){
  const act=async(r,ok)=>{const note=ok?null:prompt('Reason for rejecting?');if(!ok&&note===null)return;
   await sb.from('articles').update(ok?{status:'published',published_at:new Date().toISOString()}:{status:'rejected',review_note:note}).eq('id',r.id);load()};
  return <div>{!l.length&&<p className="mut">Nothing waiting for review.</p>}{l.map(r=><div className="card" key={r.id}><h3>{r.title}</h3>
-  <div className="art" dangerouslySetInnerHTML={{__html:r.content}}/><button className="p" onClick={()=>act(r,true)}>Approve and publish</button><button onClick={()=>act(r,false)}>Reject</button></div>)}</div>}
+  <div className="art" dangerouslySetInnerHTML={{__html:clean(r.content)}}/><button className="p" onClick={()=>act(r,true)}>Approve and publish</button><button onClick={()=>act(r,false)}>Reject</button></div>)}</div>}
 
 function Users(){
  const [l,setL]=useState([]);const load=async()=>setL((await sb.from('profiles').select('*')).data||[]);useEffect(()=>{load()},[]);
@@ -86,9 +86,10 @@ function Categories(){
   {!l.length&&<p className="mut">No categories yet.</p>}{l.map(c=><p key={c.id}>{c.name} <button onClick={async()=>{await sb.from('categories').delete().eq('id',c.id);load()}}>Delete</button></p>)}</div>}
 
 function Notify(){
- const [t,setT]=useState(''),[b,setB]=useState(''),[r,setR]=useState('');
- return <div className="card"><input placeholder="Title" value={t} onChange={e=>setT(e.target.value)}/><textarea placeholder="Message" value={b} onChange={e=>setB(e.target.value)}/>
-  <button className="p" onClick={async()=>{setR('Sending…');const {data,error}=await sb.functions.invoke('send-push',{body:{title:t,body:b}});setR(error?error.message:`Sent to ${data.sent} devices`)}}>Send notification</button><p className="mut">{r}</p></div>}
+ const [t,setT]=useState(''),[b,setB]=useState(''),[u,setU]=useState(''),[r,setR]=useState('');
+ return <div className="card"><b>Push notification</b><input placeholder="Title" value={t} onChange={e=>setT(e.target.value)}/><textarea placeholder="Message" value={b} onChange={e=>setB(e.target.value)}/>
+  <input placeholder="Story link, e.g. /article/my-story (optional)" value={u} onChange={e=>setU(e.target.value)}/>
+  <button className="p" onClick={async()=>{setR('Sending…');const {data,error}=await sb.functions.invoke('send-push',{body:{title:t,body:b,url:u}});setR(error?error.message:`Sent to ${data.sent+data.web} devices`)}}>Send notification</button><p className="mut">{r}</p></div>}
 
 function Newsletter(){
  const [s,setS]=useState(''),[b,setB]=useState(''),[l,setL]=useState(''),[r,setR]=useState('');
