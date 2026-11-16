@@ -15,11 +15,11 @@ export default function Admin(){
   <input type="password" placeholder="Password" onChange={e=>setAuth({...auth,password:e.target.value})}/>
   <button className="p" onClick={()=>login(false)}>Sign in</button><button onClick={()=>login(true)}>Sign up</button><p className="mut">{msg}</p></main>;
  const sup=me.role==='super_admin',can=p=>sup||me.permissions.includes(p);
- const tabs=['articles',...(sup?['review','users','settings']:[]),...(can('categories.manage')?['categories']:[]),...(can('notifications.send')?['notify']:[])];
+ const tabs=['articles',...(sup?['review','users','settings']:[]),...(can('categories.manage')?['categories']:[]),...(can('notifications.send')?['notify']:[]),...(can('videos.manage')?['videos']:[])];
  return <main><p>Signed in as <b>{me.full_name||'user'}</b> ({me.role}) <button onClick={()=>sb.auth.signOut().then(load)}>Sign out</button></p>
   {me.role==='user'&&<p className="card">Waiting for a super admin to give you a role.</p>}
   <div className="tabs">{tabs.map(t=><button key={t} className={tab===t?'on':''} onClick={()=>setTab(t)}>{t}</button>)}</div>
-  {tab==='articles'&&<Articles can={can} sup={sup}/>}{tab==='review'&&<Review/>}{tab==='users'&&<Users/>}{tab==='settings'&&<Settings/>}{tab==='categories'&&<Categories/>}{tab==='notify'&&<><Notify/><Newsletter/></>}</main>}
+  {tab==='articles'&&<Articles can={can} sup={sup}/>}{tab==='review'&&<Review/>}{tab==='users'&&<Users/>}{tab==='settings'&&<Settings/>}{tab==='categories'&&<Categories/>}{tab==='notify'&&<><Notify/><Newsletter/></>}{tab==='videos'&&<Videos/>}</main>}
 
 function Articles({can,sup}){
  const [list,setList]=useState([]),[cats,setCats]=useState([]),[a,setA]=useState(null);
@@ -101,3 +101,13 @@ function Newsletter(){
  return <div className="card"><b>Email subscribers</b><input placeholder="Subject" value={s} onChange={e=>setS(e.target.value)}/><textarea placeholder="Message" value={b} onChange={e=>setB(e.target.value)}/>
   <input placeholder="Story link (optional)" value={l} onChange={e=>setL(e.target.value)}/>
   <button className="p" onClick={async()=>{setR('Sending…');const {data,error}=await sb.functions.invoke('send-newsletter',{body:{subject:s,body:b,link:l}});setR(error?error.message:`Emailed ${data.sent} subscribers`)}}>Send email</button> <span className="mut">{r}</span></div>}
+
+function Videos(){
+ const [l,setL]=useState([]),[u,setU]=useState(''),[t,setT]=useState('');
+ const load=async()=>setL((await sb.from('videos').select('*').order('created_at',{ascending:false})).data||[]);useEffect(()=>{load()},[]);
+ const add=async()=>{const m=u.match(/(?:youtu\.be\/|v=|shorts\/|embed\/)([A-Za-z0-9_-]{11})/);if(!m)return alert('Paste a valid YouTube link');if(!t.trim())return alert('Add a title');
+  const {error}=await sb.from('videos').insert({title:t.trim(),youtube_id:m[1]});if(error)return alert(error.message);setU('');setT('');load()};
+ return <div className="card"><b>Videos shown in the app</b><input placeholder="YouTube link" value={u} onChange={e=>setU(e.target.value)}/><input placeholder="Title" value={t} onChange={e=>setT(e.target.value)}/>
+  <button className="p" onClick={add}>Add video</button>{!l.length&&<p className="mut">No videos yet.</p>}
+  {l.map(v=><p key={v.id} style={{display:'flex',gap:10,alignItems:'center'}}><img src={`https://i.ytimg.com/vi/${v.youtube_id}/mqdefault.jpg`} alt="" style={{width:100,borderRadius:8}}/><span style={{flex:1}}>{v.title}</span>
+   <button onClick={async()=>{await sb.from('videos').delete().eq('id',v.id);load()}}>Delete</button></p>)}</div>}

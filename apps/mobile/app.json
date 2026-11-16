@@ -1,1 +1,36 @@
-{"expo":{"name":"The Daily","slug":"the-daily","version":"1.0.0","userInterfaceStyle":"automatic","plugins":["expo-notifications"],"android":{"package":"com.example.thedaily"},"ios":{"bundleIdentifier":"com.example.thedaily"}}}
+{
+ "expo": {
+  "name": "The Daily",
+  "slug": "the-daily",
+  "version": "1.0.0",
+  "scheme": "thedaily",
+  "userInterfaceStyle": "automatic",
+  "icon": "./assets/icon.png",
+  "android": {
+   "package": "com.example.thedaily",
+   "adaptiveIcon": {
+    "foregroundImage": "./assets/icon.png",
+    "backgroundColor": "#0a7a3d"
+   }
+  },
+  "ios": {
+   "bundleIdentifier": "com.example.thedaily"
+  },
+  "plugins": [
+   [
+    "expo-notifications",
+    {
+     "icon": "./assets/badge.png",
+     "color": "#0a7a3d"
+    }
+   ]
+  ],
+  "runtimeVersion": {
+   "policy": "appVersion"
+  },
+  "updates": {
+   "fallbackToCacheTimeout": 0,
+   "checkAutomatically": "ON_LOAD"
+  }
+ }
+}
