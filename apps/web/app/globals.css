@@ -84,3 +84,6 @@ button{cursor:pointer}button.p{background:var(--ac);color:#fff;border-color:var(
 .top{position:sticky;top:8px;z-index:40;backdrop-filter:blur(10px)}
 html{scroll-padding-top:96px}
 @media(max-width:960px){.top{top:4px;padding:8px 14px}}
+.fsoc{max-width:1180px;margin:22px auto 0;display:flex;gap:10px;flex-wrap:wrap}
+.fsoc a{border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:6px 14px;text-transform:capitalize;color:#cfe3d6}
+.fsoc a:hover{color:#8bc53f;border-color:#8bc53f}
