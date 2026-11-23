@@ -8,13 +8,13 @@ export default function PushButton(){
    if(Notification.permission==='granted'){if(!s&&localStorage.pushOn)s=await r.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY)});
     if(s){const j=s.toJSON();await sbBrowser().rpc('save_push_sub',{e:j.endpoint,k:j.keys.p256dh,a:j.keys.auth})}}
    setSt(s&&Notification.permission==='granted'?'on':'off')}).catch(()=>{})},[]);
- const go=async()=>{
+ const go=async()=>{try{await go2()}catch(e){setSt('off');alert('Could not change notifications. Please try again.')}};const go2=async()=>{
   if(st==='ios')return alert('On iPhone: tap Share, then Add to Home Screen, open the installed app, then tap the bell.');
-  const reg=await navigator.serviceWorker.ready,cur=await reg.pushManager.getSubscription();
+  setSt('busy');const reg=await navigator.serviceWorker.ready,cur=await reg.pushManager.getSubscription();
   if(cur){await sbBrowser().rpc('remove_push_sub',{e:cur.endpoint});await cur.unsubscribe();localStorage.removeItem('pushOn');return setSt('off')}
-  if(await Notification.requestPermission()!=='granted')return alert('Notifications are blocked. Allow them in your browser settings.');
+  if(await Notification.requestPermission()!=='granted')return setSt('off'),alert('Notifications are blocked. Allow them in your browser settings.');
   const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY)});
   const j=sub.toJSON();const {error}=await sbBrowser().rpc('save_push_sub',{e:j.endpoint,k:j.keys.p256dh,a:j.keys.auth});
-  if(error)return alert('Could not save your subscription.');localStorage.pushOn='1';setSt('on')};
+  if(error){setSt('off');return alert('Could not save your subscription.')}localStorage.pushOn='1';setSt('on')};
  if(st==='none')return null;
- return <button className={'circle bell'+(st==='on'?' on':'')} onClick={go} aria-label={st==='on'?'Turn off notifications':'Turn on notifications'} title="Notifications">🔔</button>}
+ return <button className={'circle bell'+(st==='on'?' on':'')+(st==='busy'?' busy':'')} onClick={st==='busy'?undefined:go} aria-label={st==='on'?'Turn off notifications':'Turn on notifications'} title="Notifications">🔔</button>}

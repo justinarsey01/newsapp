@@ -94,7 +94,7 @@ function Notify(){
   <input placeholder="Story link, e.g. /article/my-story (optional)" value={u} onChange={e=>setU(e.target.value)}/>
   <input placeholder="Image URL (optional, wide 2:1 works best)" value={im} onChange={e=>setIm(e.target.value)}/>
   <label className="mut">Or upload an image: <input type="file" accept="image/*" onChange={up}/></label>{im&&<img src={im} alt="" style={{maxWidth:240,display:'block',borderRadius:8}}/>}
-  <button className="p" onClick={async()=>{setR('Sending…');const {data,error}=await sb.functions.invoke('send-push',{body:{title:t,body:b,url:u,image:im}});setR(error?error.message:`Sent to ${data.sent+data.web} devices`)}}>Send notification</button><p className="mut">{r}</p></div>}
+  <button className="p" onClick={async()=>{setR('Sending…');const {data,error}=await sb.functions.invoke('send-push',{body:{title:t,body:b,url:u,image:im}});setR(error?error.message:`Sent to ${data.sent+data.web} devices`+((data.expoErrors?.length||data.webErrors?.length)?` (problems: ${[...(data.expoErrors||[]),...(data.webErrors||[])].join(', ')})`:''))}}>Send notification</button><p className="mut">{r}</p></div>}
 
 function Newsletter(){
  const [s,setS]=useState(''),[b,setB]=useState(''),[l,setL]=useState(''),[r,setR]=useState('');
