@@ -15,11 +15,11 @@ export default function Admin(){
   <input type="password" placeholder="Password" onChange={e=>setAuth({...auth,password:e.target.value})}/>
   <button className="p" onClick={()=>login(false)}>Sign in</button><button onClick={()=>login(true)}>Sign up</button><p className="mut">{msg}</p></main>;
  const sup=me.role==='super_admin',can=p=>sup||me.permissions.includes(p);
- const tabs=['articles',...(sup?['review','users','settings']:[]),...(can('categories.manage')?['categories']:[]),...(can('notifications.send')?['notify']:[]),...(can('videos.manage')?['videos']:[])];
+ const tabs=['articles',...(sup?['review','users','settings']:[]),...(can('categories.manage')?['categories']:[]),...(can('articles.write')?['tips']:[]),...(can('notifications.send')?['notify']:[]),...(can('videos.manage')?['videos']:[])];
  return <main><p>Signed in as <b>{me.full_name||'user'}</b> ({me.role}) <button onClick={()=>sb.auth.signOut().then(load)}>Sign out</button></p>
   {me.role==='user'&&<p className="card">Waiting for a super admin to give you a role.</p>}
   <div className="tabs">{tabs.map(t=><button key={t} className={tab===t?'on':''} onClick={()=>setTab(t)}>{t}</button>)}</div>
-  {tab==='articles'&&<Articles can={can} sup={sup}/>}{tab==='review'&&<Review/>}{tab==='users'&&<Users/>}{tab==='settings'&&<Settings/>}{tab==='categories'&&<Categories/>}{tab==='notify'&&<><Notify/><Newsletter/></>}{tab==='videos'&&<Videos/>}</main>}
+  {tab==='articles'&&<Articles can={can} sup={sup}/>}{tab==='review'&&<Review/>}{tab==='users'&&<Users/>}{tab==='settings'&&<Settings/>}{tab==='categories'&&<Categories/>}{tab==='tips'&&<Tips/>}{tab==='notify'&&<><Notify/><Newsletter/></>}{tab==='videos'&&<Videos/>}</main>}
 
 function Articles({can,sup}){
  const [list,setList]=useState([]),[cats,setCats]=useState([]),[a,setA]=useState(null);
@@ -78,6 +78,13 @@ function Settings(){
    <input placeholder="Image URL" value={ads[k].image||''} onChange={e=>set(k,'image',e.target.value)}/>
    <input placeholder="Link URL" value={ads[k].link||''} onChange={e=>set(k,'link',e.target.value)}/></div>)}
   <button className="p" onClick={save}>Save ads</button> <span className="mut">{r}</span></div>}
+
+function Tips(){
+ const [l,setL]=useState([]);const load=async()=>setL((await sb.from('news_tips').select('*').order('created_at',{ascending:false}).limit(100)).data||[]);useEffect(()=>{load()},[]);
+ const st=async(id,status)=>{await sb.from('news_tips').update({status}).eq('id',id);load()};
+ return <div>{!l.length&&<p className="mut">No tips yet.</p>}{l.map(t=><div className="card" key={t.id}><b>{t.headline}</b> <span className="mut">{t.status}</span>
+  <p style={{whiteSpace:'pre-wrap'}}>{t.details}</p><p className="mut">From {t.author_name}{t.location?' · '+t.location:''}{t.contact?' · Contact: '+t.contact:''} · {new Date(t.created_at).toLocaleString()}</p>
+  <button onClick={()=>st(t.id,'used')}>Mark used</button><button onClick={()=>st(t.id,'rejected')}>Reject</button><button onClick={async()=>{await sb.from('news_tips').delete().eq('id',t.id);load()}}>Delete</button></div>)}</div>}
 
 function Categories(){
  const [l,setL]=useState([]),[n,setN]=useState('');const load=async()=>setL((await sb.from('categories').select('*').order('name')).data||[]);useEffect(()=>{load()},[]);
