@@ -4,7 +4,7 @@ export default function Comments({articleId}){
  const sb=sbBrowser(),[user,setUser]=useState(null),[list,setList]=useState([]),[text,setText]=useState(''),[mod,setMod]=useState(false),[msg,setMsg]=useState('');
  const load=async()=>setList((await sb.from('comments').select('id,body,created_at,user_id,author_name,author_avatar').eq('article_id',articleId).order('created_at',{ascending:false}).limit(100)).data||[]);
  useEffect(()=>{sb.auth.getUser().then(async r=>{setUser(r.data.user);if(r.data.user){const {data:p}=await sb.from('profiles').select('role,permissions').eq('id',r.data.user.id).maybeSingle();setMod(!!p&&(p.role==='super_admin'||(p.permissions||[]).includes('comments.moderate')))}});const {data}=sb.auth.onAuthStateChange((_e,s)=>setUser(s?.user||null));load();return()=>data.subscription.unsubscribe()},[]);
- const post=async()=>{if(!text.trim())return;setMsg('');const {error}=await sb.from('comments').insert({article_id:articleId,body:text});
+ const post=async()=>{if(!text.trim())return;if(/(https?:|www\.|[a-z0-9-]+\.(com|net|org|ng|co|io|info|biz|me|tv|xyz|ly|gl|app|link|click|site|online|shop|top)\b)/i.test(text))return setMsg('Links are not allowed in comments.');setMsg('');const {error}=await sb.from('comments').insert({article_id:articleId,body:text});
   if(error)return setMsg(error.message);setText('');load()};
  return <section className="cmts"><h3>Comments ({list.length})</h3>
   {user?<div><textarea maxLength={1000} placeholder="Write a comment…" value={text} onChange={e=>setText(e.target.value)}/>

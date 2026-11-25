@@ -15,11 +15,11 @@ export default function Admin(){
   <input type="password" placeholder="Password" onChange={e=>setAuth({...auth,password:e.target.value})}/>
   <button className="p" onClick={()=>login(false)}>Sign in</button><button onClick={()=>login(true)}>Sign up</button><p className="mut">{msg}</p></main>;
  const sup=me.role==='super_admin',can=p=>sup||me.permissions.includes(p);
- const tabs=['articles',...(can('articles.approve')?['review']:[]),...(sup?['users','settings']:[]),...(can('categories.manage')?['categories']:[]),...(can('tips.manage')?['tips']:[]),...(can('notifications.send')?['notify']:[]),...(can('videos.manage')?['videos']:[])];
+ const tabs=['articles',...(can('articles.approve')?['review']:[]),...(sup?['users','settings']:[]),...(can('categories.manage')?['categories']:[]),...(can('comments.moderate')?['comments']:[]),...(can('tips.manage')?['tips']:[]),...(can('notifications.send')?['notify']:[]),...(can('videos.manage')?['videos']:[])];
  return <main><p>Signed in as <b>{me.full_name||'user'}</b> ({me.role}) <button onClick={()=>sb.auth.signOut().then(load)}>Sign out</button></p>
   {me.role==='user'&&<p className="card">Waiting for a super admin to give you a role.</p>}
   <div className="tabs">{tabs.map(t=><button key={t} className={tab===t?'on':''} onClick={()=>setTab(t)}>{t}</button>)}</div>
-  {tab==='articles'&&<Articles can={can} sup={sup}/>}{tab==='review'&&<Review/>}{tab==='users'&&<Users/>}{tab==='settings'&&<Settings/>}{tab==='categories'&&<Categories/>}{tab==='tips'&&<Tips/>}{tab==='notify'&&<><Notify/><Newsletter/></>}{tab==='videos'&&<Videos/>}</main>}
+  {tab==='articles'&&<Articles can={can} sup={sup}/>}{tab==='review'&&<Review/>}{tab==='users'&&<Users/>}{tab==='settings'&&<Settings/>}{tab==='categories'&&<Categories/>}{tab==='comments'&&<CommentsAdmin/>}{tab==='tips'&&<Tips/>}{tab==='notify'&&<><Notify/><Newsletter/></>}{tab==='videos'&&<Videos/>}</main>}
 
 function Articles({can,sup}){
  const [list,setList]=useState([]),[cats,setCats]=useState([]),[a,setA]=useState(null);
@@ -85,6 +85,11 @@ function Tips(){
  return <div>{!l.length&&<p className="mut">No tips yet.</p>}{l.map(t=><div className="card" key={t.id}><b>{t.headline}</b> <span className="mut">{t.status}</span>
   <p style={{whiteSpace:'pre-wrap'}}>{t.details}</p><p className="mut">From {t.author_name}{t.location?' · '+t.location:''}{t.contact?' · Contact: '+t.contact:''} · {new Date(t.created_at).toLocaleString()}</p>
   <button onClick={()=>st(t.id,'used')}>Mark used</button><button onClick={()=>st(t.id,'rejected')}>Reject</button><button onClick={async()=>{await sb.from('news_tips').delete().eq('id',t.id);load()}}>Delete</button></div>)}</div>}
+
+function CommentsAdmin(){
+ const [l,setL]=useState([]);const load=async()=>setL((await sb.from('comments').select('id,body,author_name,created_at,articles(title,slug)').order('created_at',{ascending:false}).limit(100)).data||[]);useEffect(()=>{load()},[]);
+ return <div>{!l.length&&<p className="mut">No comments yet.</p>}{l.map(c=><div className="card" key={c.id}><b>{c.author_name}</b> <span className="mut">on {c.articles?.title} · {new Date(c.created_at).toLocaleString()}</span>
+  <p style={{whiteSpace:'pre-wrap'}}>{c.body}</p><button onClick={async()=>{await sb.from('comments').delete().eq('id',c.id);load()}}>Delete</button></div>)}</div>}
 
 function Categories(){
  const [l,setL]=useState([]),[n,setN]=useState('');const load=async()=>setL((await sb.from('categories').select('*').order('name')).data||[]);useEffect(()=>{load()},[]);
