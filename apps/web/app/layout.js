@@ -13,6 +13,7 @@ export default async function L({children}){
   <div><a href="/" className="logo">The<span>Daily</span></a><p>Breaking news, politics, business, sports and entertainment, reported clearly and updated all day.</p></div>
   <div><h4>Sections</h4>{c.map(x=><a key={x.slug} href={`/category/${x.slug}`}>{x.name}</a>)}</div>
   <div><h4>Company</h4><a href="/send-news">Send us news</a>{Co.map(([s,t])=><a key={s} href={`/p/${s}`}>{t}</a>)}</div></div>
+  <div className="fsend"><a className="sendbtn" href="/send-news">Send us news</a></div>
   <div className="fsoc">{soc.map(([k,v])=><a key={k} href={/^https?:/i.test(v)?v:'https://'+v} target="_blank" rel="noopener noreferrer">{k}</a>)}</div>
   <div className="fbar"><span>© {new Date().getFullYear()} The Daily. All rights reserved.</span><a href="/admin">Admin</a></div></footer>
  </body></html>}

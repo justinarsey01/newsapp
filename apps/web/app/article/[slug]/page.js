@@ -14,4 +14,4 @@ export default async function Article({params}){const a=await get(params.slug);
  {a.cover_image_url&&<img src={a.cover_image_url} style={{width:'100%'}} alt=""/>}
  <div className="art" dangerouslySetInnerHTML={{__html:clean(a.content)}}/><AdSlot name="ad_article"/>
  <Share url={`${site}/article/${a.slug}`} title={a.title}/>
- <Comments articleId={a.id}/>{rel?.length>0&&<><h3>More in {a.categories?.name}</h3><div className="grid">{rel.map(r=><Card key={r.slug} a={r}/>)}</div></>}</main>}
+ {a.allow_comments!==false?<Comments articleId={a.id}/>:<p className="mut">Comments are turned off for this story.</p>}{rel?.length>0&&<><h3>More in {a.categories?.name}</h3><div className="grid">{rel.map(r=><Card key={r.slug} a={r}/>)}</div></>}</main>}

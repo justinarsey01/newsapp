@@ -15,7 +15,7 @@ export default function Admin(){
   <input type="password" placeholder="Password" onChange={e=>setAuth({...auth,password:e.target.value})}/>
   <button className="p" onClick={()=>login(false)}>Sign in</button><button onClick={()=>login(true)}>Sign up</button><p className="mut">{msg}</p></main>;
  const sup=me.role==='super_admin',can=p=>sup||me.permissions.includes(p);
- const tabs=['articles',...(sup?['review','users','settings']:[]),...(can('categories.manage')?['categories']:[]),...(can('articles.write')?['tips']:[]),...(can('notifications.send')?['notify']:[]),...(can('videos.manage')?['videos']:[])];
+ const tabs=['articles',...(can('articles.approve')?['review']:[]),...(sup?['users','settings']:[]),...(can('categories.manage')?['categories']:[]),...(can('tips.manage')?['tips']:[]),...(can('notifications.send')?['notify']:[]),...(can('videos.manage')?['videos']:[])];
  return <main><p>Signed in as <b>{me.full_name||'user'}</b> ({me.role}) <button onClick={()=>sb.auth.signOut().then(load)}>Sign out</button></p>
   {me.role==='user'&&<p className="card">Waiting for a super admin to give you a role.</p>}
   <div className="tabs">{tabs.map(t=><button key={t} className={tab===t?'on':''} onClick={()=>setTab(t)}>{t}</button>)}</div>
@@ -27,7 +27,7 @@ function Articles({can,sup}){
   setCats((await sb.from('categories').select('*')).data||[])};
  useEffect(()=>{load()},[]);
  const save=async status=>{const row={title:a.title,slug:a.slug||slugify(a.title),excerpt:a.excerpt,content:a.content||'',cover_image_url:a.cover_image_url||((a.content||'').match(/<img[^>]+src="([^"]+)"/)||[])[1]||null,
-  category_id:a.category_id||null,is_breaking:!!a.is_breaking,is_sponsored:!!a.is_sponsored,status};
+  category_id:a.category_id||null,is_breaking:!!a.is_breaking,is_sponsored:!!a.is_sponsored,allow_comments:a.allow_comments!==false,status};
   const {error}=a.id?await sb.from('articles').update(row).eq('id',a.id):await sb.from('articles').insert(row);
   if(error)return alert(error.message);setA(null);load()};
  if(a)return <div className="card"><input placeholder="Headline" value={a.title||''} onChange={e=>setA({...a,title:e.target.value})}/>
@@ -39,10 +39,10 @@ function Articles({can,sup}){
    if(error)return alert('Upload failed: '+error.message);setA({...a,cover_image_url:sb.storage.from('media').getPublicUrl(p).data.publicUrl})}}/></label>
   {a.cover_image_url&&<img src={a.cover_image_url} alt="" style={{maxWidth:220,display:'block',borderRadius:8}}/>}
   <select value={a.category_id||''} onChange={e=>setA({...a,category_id:e.target.value})}><option value="">No category</option>{cats.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>
-  <label><input type="checkbox" style={{width:'auto'}} checked={!!a.is_breaking} onChange={e=>setA({...a,is_breaking:e.target.checked})}/> Breaking news</label> <label><input type="checkbox" style={{width:'auto'}} checked={!!a.is_sponsored} onChange={e=>setA({...a,is_sponsored:e.target.checked})}/> Promoted (sponsored)</label>
+  <label><input type="checkbox" style={{width:'auto'}} checked={!!a.is_breaking} onChange={e=>setA({...a,is_breaking:e.target.checked})}/> Breaking news</label> <label><input type="checkbox" style={{width:'auto'}} checked={!!a.is_sponsored} onChange={e=>setA({...a,is_sponsored:e.target.checked})}/> Promoted (sponsored)</label> <label><input type="checkbox" style={{width:'auto'}} checked={a.allow_comments!==false} onChange={e=>setA({...a,allow_comments:e.target.checked})}/> Allow comments</label>
   <Editor value={a.content} onChange={h=>a.content=h}/>
   <button onClick={()=>save('draft')}>Save draft</button>
-  <button className="p" onClick={()=>save('published')}>{sup?'Publish':'Submit for review'}</button><button onClick={()=>setA(null)}>Cancel</button></div>;
+  <button className="p" onClick={()=>save('published')}>{can('articles.approve')?'Publish':'Submit for review'}</button><button onClick={()=>setA(null)}>Cancel</button></div>;
  return <div>{can('articles.write')&&<button className="p" onClick={()=>setA({})}>New article</button>}
   {list.length===0&&<p className="mut">No articles yet.</p>}
   {list.map(r=><div className="card" key={r.id}><b>{r.title}</b> <span className="mut">{r.status}</span>
