@@ -12,4 +12,4 @@ export default function Comments({articleId}){
   :<button className="gbtn" onClick={()=>sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.href}})}>Sign in with Google to comment</button>}
   {list.map(c=><div className="cm" key={c.id}>{c.author_avatar&&<img src={c.author_avatar} alt="" referrerPolicy="no-referrer"/>}
    <div><b>{c.author_name||'Reader'}</b> <span className="mut">{new Date(c.created_at).toLocaleString()}</span><p>{c.body}</p>
-   {(user?.id===c.user_id||mod)&&<button onClick={async()=>{await sb.from('comments').delete().eq('id',c.id);load()}}>Delete</button>}</div></div>)}</section>}
+   {(user?.id===c.user_id||mod)&&<button onClick={async()=>{if(!confirm('Delete this comment? This cannot be undone.'))return;await sb.from('comments').delete().eq('id',c.id);load()}}>Delete</button>}</div></div>)}</section>}
