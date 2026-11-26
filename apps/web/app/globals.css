@@ -99,3 +99,4 @@ html{scroll-padding-top:96px}
 .whead{display:flex;justify-content:space-between;align-items:center;font-size:18px}
 .wtemp{font-size:22px;font-weight:800;color:var(--ac)}
 .wdays{display:grid;grid-template-columns:repeat(5,1fr);text-align:center;margin-top:12px;gap:4px}
+.keep{margin:32px 0}
