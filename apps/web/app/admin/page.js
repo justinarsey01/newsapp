@@ -27,6 +27,7 @@ const CSS=`.adm{display:grid;grid-template-columns:240px 1fr;max-width:1280px;ma
 .adm-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.adm-row label{display:inline-flex;align-items:center;gap:6px;margin:0;font-weight:500}.adm-row input[type=checkbox]{width:auto}
 .adm label{display:block;margin:8px 0;font-weight:600;font-size:14px}
 .adm-badge{font-size:12px;padding:2px 10px;border-radius:12px;background:var(--bd);display:inline-block}.adm-badge.published{background:#d7f0df;color:#0a5c2e}.adm-badge.pending_review{background:#fdf0cf;color:#8a5a00}.adm-badge.rejected{background:#f8d9d6;color:#9b2c20}
+.adm-badge.sev-clear{background:#d7f0df;color:#0a5c2e}.adm-badge.sev-moderate{background:#fdf0cf;color:#8a5a00}.adm-badge.sev-heavy{background:#fde0cf;color:#a34100}.adm-badge.sev-blocked{background:#f8d9d6;color:#9b2c20}
 .adm-toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:10px 20px;border-radius:24px;z-index:60;box-shadow:0 6px 20px rgba(0,0,0,.3)}
 .adm button.danger{color:#c0392b;border-color:#c0392b}.adm-login{max-width:420px}.adm-perms{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:4px;margin-top:8px}
 @media(max-width:860px){.adm{grid-template-columns:1fr}.adm-side{display:none;position:static;max-height:none;border-right:0;border-bottom:1px solid var(--bd)}.adm-side.open{display:block}.adm-burger{display:inline-block}.adm-main{padding:12px}}`;
@@ -52,11 +53,12 @@ function AdminShell({me,reload}){
  const refresh=async()=>{const r=can('articles.approve')?await sb.from('articles').select('id',{count:'exact',head:true}).eq('status','pending_review'):{count:0};
   const t=can('tips.manage')?await sb.from('news_tips').select('id',{count:'exact',head:true}).eq('status','new'):{count:0};setCounts({review:r.count||0,tips:t.count||0})};
  useEffect(()=>{refresh()},[tab]);
+ useEffect(()=>{const h=location.hash.replace('#','');if(['review','tips','traffic'].includes(h))setTab(h)},[]);
  const go=k=>{setTab(k);setEdit(null);setMenu(false)};
  const openEditor=row=>{setEdit(row);setTab('articles');setMenu(false)};
  const NAV=[['Start',[['home','🏠','Overview',true]]],
   ['Content',[['articles','📰','Articles',can('articles.write')||can('articles.approve')],['review','✅','Review queue',can('articles.approve')],['tips','💡','News tips',can('tips.manage')],['videos','🎬','Videos',can('videos.manage')],['categories','🗂️','Categories',can('categories.manage')]]],
-  ['Community',[['comments','💬','Comments',can('comments.moderate')],['notify','📣','Notify readers',can('notifications.send')]]],
+  ['Community',[['comments','💬','Comments',can('comments.moderate')],['notify','📣','Notify readers',can('notifications.send')],['traffic','🚦','Traffic alerts',can('traffic.manage')]]],
   ['Manage',[['users','👥','Admins and roles',sup],['settings','⚙️','Settings',can('settings.manage')]]]];
  return <div className="adm"><style>{CSS}</style>
   <aside className={'adm-side'+(menu?' open':'')}>
@@ -67,22 +69,23 @@ function AdminShell({me,reload}){
   <section className="adm-main">
    <div className="adm-bar"><button className="adm-burger" onClick={()=>setMenu(!menu)}>☰ Menu</button><a href="/" target="_blank" rel="noopener">View website ↗</a></div>
    {me.role==='user'&&<div className="card"><b>Almost there.</b><p>Your account is created. A super admin needs to give you a role before you can use the admin area.</p></div>}
-   {tab==='home'&&<Overview me={me} can={can} counts={counts} go={go} openEditor={openEditor}/>}
+   {tab==='home'&&<Overview me={me} can={can} counts={counts} go={go} openEditor={openEditor} say={say}/>}
    {tab==='articles'&&<Articles can={can} edit={edit} setEdit={setEdit} say={say} refresh={refresh}/>}
    {tab==='review'&&<Review openEditor={openEditor} say={say} refresh={refresh}/>}
    {tab==='tips'&&<Tips openEditor={openEditor} say={say} refresh={refresh}/>}
    {tab==='videos'&&<Videos say={say}/>}{tab==='categories'&&<Categories say={say}/>}
    {tab==='comments'&&<CommentsAdmin say={say}/>}{tab==='notify'&&<><Notify say={say}/><Newsletter say={say}/></>}
-   {tab==='users'&&<Users say={say}/>}{tab==='settings'&&<Settings say={say}/>}</section>
+   {tab==='traffic'&&<TrafficAdmin say={say}/>}{tab==='users'&&<Users say={say}/>}{tab==='settings'&&<Settings say={say}/>}</section>
   {toast&&<div className="adm-toast" role="status">{toast}</div>}</div>}
 
-function Overview({me,can,counts,go,openEditor}){
+function Overview({me,can,counts,go,openEditor,say}){
  const [st,setSt]=useState({pub:0,draft:0});
  useEffect(()=>{(async()=>{const c=async s=>(await sb.from('articles').select('id',{count:'exact',head:true}).eq('status',s)).count||0;setSt({pub:await c('published'),draft:await c('draft')})})()},[]);
  const S=({n,l,k})=><button className="adm-stat" onClick={()=>go(k)}><b>{n}</b>{l}</button>;
  return <div><h2 className="adm-h">Welcome, {me.full_name||'Admin'}</h2><p className="adm-sub">Here is what needs your attention.</p>
   <div className="adm-stats">{can('articles.approve')&&<S n={counts.review} l="Stories waiting for review" k="review"/>}{can('tips.manage')&&<S n={counts.tips} l="New news tips" k="tips"/>}<S n={st.pub} l="Published stories" k="articles"/><S n={st.draft} l="Drafts" k="articles"/></div>
-  <div className="adm-row">{can('articles.write')&&<button className="p" onClick={()=>openEditor({})}>＋ Write a new article</button>}{can('articles.approve')&&<button onClick={()=>go('review')}>Open review queue</button>}{can('tips.manage')&&<button onClick={()=>go('tips')}>Read news tips</button>}</div></div>}
+  <div className="adm-row">{can('articles.write')&&<button className="p" onClick={()=>openEditor({})}>＋ Write a new article</button>}{can('articles.approve')&&<button onClick={()=>go('review')}>Open review queue</button>}{can('tips.manage')&&<button onClick={()=>go('tips')}>Read news tips</button>}{can('traffic.manage')&&<button onClick={()=>go('traffic')}>🚦 Post a traffic alert</button>}</div>
+  {(can('articles.approve')||can('tips.manage'))&&<div style={{marginTop:18}}><Alerts say={say}/></div>}</div>}
 
 function Articles({can,edit,setEdit,say,refresh}){
  const [list,setList]=useState([]),[cats,setCats]=useState([]),[q,setQ]=useState(''),[fs,setFs]=useState('all');
@@ -229,3 +232,53 @@ function Settings({say}){
    {ADS.map(([k,l,h])=><div key={k} style={{marginBottom:12}}><b>{l}</b> <span className="mut">· {h}</span>
     <input placeholder="Picture link" value={(ads[k]||{}).image||''} onChange={e=>setAds({...ads,[k]:{...(ads[k]||{}),image:e.target.value}})}/><input placeholder="Link when tapped" value={(ads[k]||{}).link||''} onChange={e=>setAds({...ads,[k]:{...(ads[k]||{}),link:e.target.value}})}/></div>)}
    <button className="p" onClick={async()=>{for(const [k] of ADS)await sb.from('app_settings').upsert({key:k,value:ads[k]||{}});say('Adverts saved')}}>Save adverts</button></div></div>}
+
+const b64=s=>{const r=(s+'='.repeat((4-s.length%4)%4)).replace(/-/g,'+').replace(/_/g,'/');return Uint8Array.from([...atob(r)].map(c=>c.charCodeAt(0)))};
+function Alerts({say}){
+ const [st,setSt]=useState('checking');
+ useEffect(()=>{(async()=>{if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window))return setSt('unsupported');
+  try{const r=await navigator.serviceWorker.ready;const sub=await r.pushManager.getSubscription();setSt(sub&&Notification.permission==='granted'&&localStorage.staffAlerts?'on':'off')}catch(e){setSt('off')}})()},[]);
+ const on=async()=>{try{setSt('busy');
+  if(await Notification.requestPermission()!=='granted'){setSt('off');return say('Notifications are blocked in this browser. Allow them in the site settings.')}
+  const reg=await navigator.serviceWorker.ready;let sub=await reg.pushManager.getSubscription();
+  if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY)});
+  const j=sub.toJSON();const {error}=await sb.rpc('save_staff_sub',{e:j.endpoint,k:j.keys.p256dh,a:j.keys.auth});
+  if(error){setSt('off');return say(error.message)}
+  localStorage.staffAlerts='1';setSt('on');say('Alerts are on for this device');
+  reg.showNotification('Alerts are on',{body:'You will be notified here when a story or tip needs you.',icon:'/icon-192.png'})}catch(e){setSt('off');say('Could not turn on alerts: '+(e.message||e))}};
+ const off=async()=>{try{const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.getSubscription();if(sub)await sb.rpc('remove_staff_sub',{e:sub.endpoint});localStorage.removeItem('staffAlerts');setSt('off');say('Alerts turned off for this device')}catch(e){say(e.message)}};
+ return <div className="card"><h3 className="adm-h">📲 Phone and computer alerts</h3>
+  <p className="mut">Get a notification on this device when a story is waiting for review or a reader sends a tip. Open this page on your phone to turn it on there too.</p>
+  {st==='unsupported'?<p className="mut">This browser does not support notifications. On iPhone, add the site to your Home Screen first.</p>
+  :st==='on'?<button onClick={off}>🔕 Turn off alerts on this device</button>:<button className="p" disabled={st==='busy'||st==='checking'} onClick={on}>{st==='busy'?'Turning on…':'🔔 Turn on alerts on this device'}</button>}</div>}
+
+const TCITIES=['Lagos','Abuja','Port Harcourt','Kano','Ibadan','Enugu','Abeokuta','Asaba','Onitsha','Benin City','Owerri','Other'];
+const KINDS={traffic:'🚗 Heavy traffic',accident:'💥 Accident',flood:'🌊 Flooding',roadwork:'🚧 Road works',closure:'⛔ Road closed',police:'👮 Checkpoint'};
+const SEV={clear:'Clear',moderate:'Moderate',heavy:'Heavy',blocked:'Blocked'};
+const DUR=[[30,'30 minutes'],[60,'1 hour'],[180,'3 hours'],[360,'6 hours'],[720,'12 hours'],[1440,'24 hours']];
+function TrafficAdmin({say}){
+ const blank={city:'Lagos',road:'',kind:'traffic',severity:'heavy',details:'',mins:180,notify:false};
+ const [f,setF]=useState(blank),[l,setL]=useState([]),[busy,setBusy]=useState(false);
+ const load=async()=>setL((await sb.from('traffic_alerts').select('*').order('created_at',{ascending:false}).limit(60)).data||[]);useEffect(()=>{load()},[]);
+ const set=k=>e=>setF({...f,[k]:e.target.type==='checkbox'?e.target.checked:e.target.value});
+ const post=async()=>{if(!f.road.trim())return say('Say which road or area');
+  if(f.notify&&!sure('Also send a push notification to all readers?'))return;setBusy(true);
+  const row={city:f.city,road:f.road.trim(),kind:f.kind,severity:f.severity,details:f.details.trim()||null,expires_at:new Date(Date.now()+f.mins*60000).toISOString()};
+  const {error}=await sb.from('traffic_alerts').insert(row);setBusy(false);if(error)return say(error.message);
+  if(f.notify)await sb.functions.invoke('send-push',{body:{title:KINDS[f.kind].replace(/^\S+\s/,'')+': '+f.road.trim()+' ('+f.city+')',body:f.details.trim()||'Tap for the latest road alerts.',url:'/traffic'}});
+  say('Alert posted');setF(blank);load()};
+ const active=a=>new Date(a.expires_at)>new Date();
+ return <div><h2 className="adm-h">Traffic alerts</h2><p className="adm-sub">Post road updates. They show on the website and in the app, then disappear by themselves when they expire.</p>
+  <div className="card"><div className="adm-row"><label>City<select value={f.city} onChange={set('city')}>{TCITIES.map(c=><option key={c}>{c}</option>)}</select></label>
+   <label>Type<select value={f.kind} onChange={set('kind')}>{Object.entries(KINDS).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label>
+   <label>How bad?<select value={f.severity} onChange={set('severity')}>{Object.entries(SEV).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label>
+   <label>Show for<select value={f.mins} onChange={e=>setF({...f,mins:Number(e.target.value)})}>{DUR.map(([m,lb])=><option key={m} value={m}>{lb}</option>)}</select></label></div>
+   <label>Road or area<input value={f.road} onChange={set('road')} placeholder="e.g. Third Mainland Bridge, towards Ikoyi"/></label>
+   <label>Details (optional)<textarea rows={2} value={f.details} onChange={set('details')} placeholder="What is happening and what should drivers do?"/></label>
+   <div className="adm-row"><label><input type="checkbox" checked={f.notify} onChange={set('notify')}/> Also send a push notification to readers</label><button className="p" disabled={busy} onClick={post}>🚦 Post alert</button></div></div>
+  {!l.length&&<p className="mut">No alerts yet.</p>}
+  {l.map(a=>{const on=active(a);return <div className="card" key={a.id} style={{opacity:on?1:.6}}><div className="adm-row" style={{justifyContent:'space-between'}}><b>{KINDS[a.kind]||a.kind} · {a.city}</b><span className={'adm-badge sev-'+a.severity}>{SEV[a.severity]}</span></div>
+   <p style={{margin:'4px 0'}}><b>{a.road}</b></p>{a.details&&<p className="mut" style={{whiteSpace:'pre-wrap'}}>{a.details}</p>}
+   <p className="mut">{on?'Live until '+when(a.expires_at):'Ended '+when(a.expires_at)}</p>
+   <div className="adm-row">{on&&<button onClick={async()=>{await sb.from('traffic_alerts').update({expires_at:new Date().toISOString()}).eq('id',a.id);say('Alert ended');load()}}>⏹ End now</button>}
+   <button className="danger" onClick={async()=>{if(!sure('Delete this alert?'))return;await sb.from('traffic_alerts').delete().eq('id',a.id);say('Alert deleted');load()}}>🗑 Delete</button></div></div>})}</div>}
