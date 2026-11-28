@@ -100,3 +100,11 @@ html{scroll-padding-top:96px}
 .wtemp{font-size:22px;font-weight:800;color:var(--ac)}
 .wdays{display:grid;grid-template-columns:repeat(5,1fr);text-align:center;margin-top:12px;gap:4px}
 .keep{margin:32px 0}
+.tchips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:14px 0}
+.tchips a{padding:6px 14px;border-radius:20px;border:1px solid var(--bd);background:var(--card)}
+.tchips a.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.talert{border-left:6px solid var(--bd)}
+.talert.sev-heavy{border-left-color:#e67e22}
+.talert.sev-blocked{border-left-color:#c0392b}
+.talert.sev-moderate{border-left-color:#d4ac0d}
+.talert.sev-clear{border-left-color:#27ae60}
